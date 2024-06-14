@@ -3,3 +3,4 @@ tensorflow
 nltk
 pandas
 scikit-learn
+tensorflow_intel
