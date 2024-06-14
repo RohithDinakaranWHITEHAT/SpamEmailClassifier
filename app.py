@@ -1,14 +1,13 @@
 import streamlit as st
+import tensorflow as tf
 from tensorflow.keras.models import load_model
-from tensorflow.keras.preprocessing.sequence import pad_sequences
 import pickle
-import re
-from nltk.corpus import stopwords
-from nltk.stem import PorterStemmer
-import string
+import numpy as np
 import nltk
+from nltk.corpus import stopwords
+from nltk.stem.porter import PorterStemmer
+import string
 
-# Download stopwords
 nltk.download('stopwords')
 
 # Load the saved model
@@ -18,22 +17,23 @@ model = load_model('spam_classifier_model.h5')
 with open('tokenizer.pickle', 'rb') as handle:
     tokenizer = pickle.load(handle)
 
-# Initialize the stemmer and stopwords
-stemmer = PorterStemmer()
-stopwords_set = set(stopwords.words('english'))
-
-# Text preprocessing function
 def preprocess_text(text):
     text = text.lower()
     text = text.translate(str.maketrans('', '', string.punctuation))
-    text = text.split()
-    text = [stemmer.stem(word) for word in text if word not in stopwords_set]
-    text = ' '.join(text)
-    return text
+    words = text.split()
+    stemmer = PorterStemmer()
+    stopwords_set = set(stopwords.words('english'))
+    words = [stemmer.stem(word) for word in words if word not in stopwords_set]
+    return ' '.join(words)
 
-# Streamlit app
+def classify_email(text):
+    preprocessed_text = preprocess_text(text)
+    sequence = tokenizer.texts_to_sequences([preprocessed_text])
+    padded_sequence = tf.keras.preprocessing.sequence.pad_sequences(sequence, maxlen=500)
+    prediction = model.predict(padded_sequence)
+    return 'Spam' if prediction > 0.5 else 'Not Spam'
+
 st.title('Spam Email Classifier')
-
 # Model description
 st.header('About the Model')
 st.write('''
@@ -47,24 +47,7 @@ resulting in a high accuracy of 98% on the test data. This allows for efficient 
 
 st.write('Enter an email to check if it is spam or not.')
 
-user_input = st.text_area('Email text')
-
+input_email = st.text_area('Enter the email text:')
 if st.button('Classify'):
-    if user_input:
-        # Preprocess the input
-        preprocessed_text = preprocess_text(user_input)
-        # Tokenize the input
-        tokenized_text = tokenizer.texts_to_sequences([preprocessed_text])
-        # Pad the sequence
-        padded_text = pad_sequences(tokenized_text, maxlen=100)
-
-        # Predict
-        prediction = model.predict(padded_text)[0][0]
-
-        # Output result
-        if prediction > 0.5:
-            st.write('This email is **spam**.')
-        else:
-            st.write('This email is **not spam**.')
-    else:
-        st.write('Please enter some text.')
+    result = classify_email(input_email)
+    st.write(f'The email is: {result}')
