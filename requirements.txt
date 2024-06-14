@@ -1,4 +1,4 @@
-nltk==3.8.1
+nltk
 streamlit
 tensorflow==2.6.0
 tensorflow_intel==2.15.0
